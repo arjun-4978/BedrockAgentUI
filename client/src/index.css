@@ -158,3 +158,52 @@
 .markdown-content em {
   @apply italic;
 }
+
+/* Message content styling */
+.message-content {
+  @apply whitespace-pre-wrap leading-relaxed;
+}
+
+.message-content h1,
+.message-content h2,
+.message-content h3,
+.message-content h4,
+.message-content h5,
+.message-content h6 {
+  @apply font-semibold mt-4 mb-2 first:mt-0;
+}
+
+.message-content h1 { @apply text-xl; }
+.message-content h2 { @apply text-lg; }
+.message-content h3 { @apply text-base; }
+
+.message-content ul,
+.message-content ol {
+  @apply my-2 pl-4;
+}
+
+.message-content li {
+  @apply mb-1;
+}
+
+.message-content p {
+  @apply mb-2;
+}
+
+.message-content strong {
+  @apply font-semibold;
+}
+
+.message-content em {
+  @apply italic;
+}
+
+/* Streaming cursor animation */
+.streaming-cursor {
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}

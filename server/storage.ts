@@ -13,6 +13,7 @@ export interface IStorage {
   getChatMessages(sessionId: string): Promise<ChatMessage[]>;
   
   createReport(report: InsertReport): Promise<Report>;
+  updateReport(id: string, updates: Partial<Report>): Promise<Report | undefined>;
   getReports(): Promise<Report[]>;
   getReport(id: string): Promise<Report | undefined>;
 }
@@ -104,15 +105,29 @@ export class MemStorage implements IStorage {
       description: insertReport.description || null,
       s3Path: insertReport.s3Path,
       size: insertReport.size || null,
+      lastModified: insertReport.lastModified || null,
       createdAt: new Date()
     };
     this.reports.set(id, report);
     return report;
   }
 
+  async updateReport(id: string, updates: Partial<Report>): Promise<Report | undefined> {
+    const existing = this.reports.get(id);
+    if (!existing) return undefined;
+    
+    const updated = { ...existing, ...updates };
+    this.reports.set(id, updated);
+    return updated;
+  }
+
   async getReports(): Promise<Report[]> {
     return Array.from(this.reports.values()).sort(
-      (a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0)
+      (a, b) => {
+        const dateA = a.lastModified ? new Date(a.lastModified).getTime() : (a.createdAt?.getTime() || 0);
+        const dateB = b.lastModified ? new Date(b.lastModified).getTime() : (b.createdAt?.getTime() || 0);
+        return dateB - dateA;
+      }
     );
   }
 

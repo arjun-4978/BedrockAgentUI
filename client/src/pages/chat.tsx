@@ -59,7 +59,13 @@ export default function ChatPage() {
 
   const handleSendMessage = async (content: string) => {
     if (!sessionId || !content.trim()) return;
-    await sendMessageMutation.mutateAsync(content);
+    // Refresh messages to get the final stored messages
+    queryClient.invalidateQueries({
+      queryKey: ["/api/chat", sessionId, "messages"]
+    });
+    queryClient.invalidateQueries({
+      queryKey: ["/api/reports"]
+    });
   };
 
   const handleOpenReport = (report: Report) => {

@@ -32,20 +32,25 @@ export default function ReportsSidebar({ reports, isLoading, onOpenReport }: Rep
   return (
     <div className="w-80 bg-card border-l border-border flex flex-col" data-testid="reports-sidebar">
       {/* Reports Header */}
-      <div className="p-4 border-b border-border">
+      <div className="p-4 border-b border-border bg-gradient-to-r from-emerald-500 to-teal-600">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground">Reports</h2>
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
+              <i className="fas fa-file-chart-column text-white text-sm"></i>
+            </div>
+            <h2 className="text-lg font-semibold text-white">BRD Reports</h2>
+          </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={handleRefreshReports}
-            className="p-1 hover:bg-muted rounded"
+            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
             data-testid="refresh-reports-button"
           >
-            <i className="fas fa-refresh text-muted-foreground text-sm"></i>
+            <i className="fas fa-refresh text-white text-sm"></i>
           </Button>
         </div>
-        <p className="text-sm text-muted-foreground mt-1">Latest reports from S3</p>
+        <p className="text-sm text-white/90 mt-1">Latest reports from S3 bucket</p>
       </div>
 
       {/* Reports List */}
@@ -76,8 +81,11 @@ export default function ReportsSidebar({ reports, isLoading, onOpenReport }: Rep
             <div
               key={report.id}
               onClick={() => onOpenReport(report)}
-              className="bg-background rounded-lg p-3 border border-border hover:border-primary/50 transition-colors cursor-pointer fade-in"
+              className="bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-lg p-3 border-2 border-transparent bg-clip-padding hover:shadow-lg hover:scale-[1.02] transition-all duration-200 cursor-pointer fade-in relative overflow-hidden"
               data-testid={`report-item-${report.id}`}
+              style={{
+                background: 'linear-gradient(white, white) padding-box, linear-gradient(45deg, #3b82f6, #8b5cf6, #ec4899) border-box'
+              }}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -86,12 +94,12 @@ export default function ReportsSidebar({ reports, isLoading, onOpenReport }: Rep
                     <p className="text-xs text-muted-foreground mt-1">{report.description}</p>
                   )}
                   <div className="flex items-center space-x-4 mt-2 text-xs text-muted-foreground">
-                    <span>{formatDate(report.createdAt)}</span>
+                    <span>{formatDate(report.lastModified || report.createdAt)}</span>
                     {report.size && <span>{report.size}</span>}
                   </div>
                 </div>
                 <div className="flex items-center space-x-1 ml-2">
-                  <div className="w-2 h-2 bg-accent rounded-full"></div>
+                  <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-pulse"></div>
                 </div>
               </div>
             </div>
@@ -101,9 +109,13 @@ export default function ReportsSidebar({ reports, isLoading, onOpenReport }: Rep
 
       {/* Reports Footer */}
       <div className="p-4 border-t border-border">
+        <div className="text-xs text-muted-foreground mb-3 text-center">
+          {reports.length > 0 && (
+            <span>Total: {reports.length} reports • Last updated: {reports[0]?.lastModified ? formatDate(reports[0].lastModified) : 'Unknown'}</span>
+          )}
+        </div>
         <Button
-          variant="secondary"
-          className="w-full"
+          className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
           onClick={handleRefreshReports}
           data-testid="view-all-reports-button"
         >

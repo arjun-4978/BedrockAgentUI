@@ -94,7 +94,7 @@ async function invokeBedrockAgent(inputText: string, sessionId: string) {
 
 async function listS3Reports() {
   const bucketName = process.env.S3_REPORTS_BUCKET || "";
-  const prefix = process.env.S3_REPORTS_PREFIX || "reports/";
+  const prefix = "BRD_";
   
   try {
     const command = new ListObjectsV2Command({
@@ -153,7 +153,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Send a message to the agent
+  // Send a message to the agent with streaming
+  app.post("/api/chat/:sessionId/message/stream", async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const validation = insertChatMessageSchema.safeParse(req.body);
+      
+      if (!validation.success) {
+        return res.status(400).json({ error: validation.error });
+      }
+
+      const { content } = validation.data;
+
+      // Set up SSE headers
+      res.writeHead(200, {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Cache-Control'
+      });
+
+      // Save user message
+      await storage.createChatMessage(sessionId, {
+        content,
+        isFromAgent: false
+      });
+
+      let responseText = "";
+      
+      try {
+        const agentResponse = await invokeBedrockAgent(content, sessionId);
+        
+        if (agentResponse.completion) {
+          // Handle streaming response
+          for await (const chunkEvent of agentResponse.completion) {
+            if (chunkEvent.chunk) {
+              const decodedResponse = new TextDecoder("utf-8")
+                .decode(chunkEvent.chunk.bytes);
+              responseText += decodedResponse;
+              // Stream each chunk to client
+              res.write(decodedResponse);
+            }
+          }
+        }
+      } catch (bedrockError: any) {
+        console.error("Bedrock agent call failed, trying local API:", bedrockError.message);
+        
+        // Try local API fallback
+        try {
+          const localApiUrl = process.env.LOCAL_API_URL || 'http://localhost:8080/invocations';
+          console.log(`Calling local API at ${localApiUrl}`);
+          const localResponse = await fetch(localApiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ input: content })
+          });
+          
+          if (localResponse.ok) {
+            const localData = await localResponse.json();
+            responseText = localData.output || localData.response || JSON.stringify(localData);
+            // Stream the local API response
+            res.write(responseText);
+          } else {
+            throw new Error(`Local API returned status: ${localResponse.status}`);
+          }
+        } catch (localError: any) {
+          console.error("Local API also failed:", localError.message);
+          responseText = `Both AWS Bedrock and the local API are currently unavailable:\n` +
+            `• Bedrock Error: ${bedrockError.message}\n` +
+            `• Local API Error: ${localError.message}`;
+          res.write(responseText);
+        }
+      }
+
+      // Save agent response
+      await storage.createChatMessage(sessionId, {
+        content: responseText,
+        isFromAgent: true
+      });
+
+      res.end();
+    } catch (error) {
+      console.error("Error in streaming message:", error);
+      res.status(500).end();
+    }
+  });
+
+  // Send a message to the agent (non-streaming fallback)
   app.post("/api/chat/:sessionId/message", async (req, res) => {
     try {
       const { sessionId } = req.params;
@@ -204,22 +293,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       } catch (bedrockError: any) {
-        console.error("Bedrock agent call failed, using fallback response:", bedrockError.message);
+        console.error("Bedrock agent call failed, trying local API:", bedrockError.message);
         
-        // Provide a helpful fallback response when Bedrock is not available
-        if (bedrockError.name === 'ResourceNotFoundException') {
-          responseText = `Thank you for your message: "${content}"\n\n` +
-            `I'm currently unable to connect to the AWS Bedrock agent. This could be because:\n` +
-            `• The agent ID or alias ID needs to be configured correctly\n` +
-            `• The agent doesn't exist in the specified AWS region\n` +
-            `• AWS permissions need to be updated\n\n` +
-            `Please contact your administrator to configure the Bedrock agent integration.\n\n` +
-            `For testing purposes, this is a simulated response. The chat interface and S3 report features are working correctly.`;
-        } else {
+        // Try local API fallback
+        try {
+          const localApiUrl = process.env.LOCAL_API_URL || 'http://localhost:8080/invocations';
+          console.log(`Calling local API at ${localApiUrl}`);
+          const localResponse = await fetch(localApiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ input: content })
+          });
+          
+          if (localResponse.ok) {
+            const localData = await localResponse.json();
+            responseText = localData.output || localData.response || JSON.stringify(localData);
+            console.log("Local API response received successfully");
+          } else {
+            throw new Error(`Local API returned status: ${localResponse.status}`);
+          }
+        } catch (localError: any) {
+          console.error("Local API also failed:", localError.message);
+          
+          // Final fallback response
           responseText = `I received your message: "${content}"\n\n` +
-            `I'm currently experiencing technical difficulties connecting to the AI agent service. ` +
-            `Please try again later or contact support if the issue persists.\n\n` +
-            `Error: ${bedrockError.message}`;
+            `Both AWS Bedrock and the local API are currently unavailable:\n` +
+            `• Bedrock Error: ${bedrockError.message}\n` +
+            `• Local API Error: ${localError.message}\n\n` +
+            `Please ensure your local API is running on http://localhost:8080/invocations or contact support.`;
         }
       }
 
@@ -249,18 +352,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const s3Objects = await listS3Reports();
         
-        // Create report entries for any S3 objects not in storage
+        console.log(`Found ${s3Objects.length} S3 objects`);
+        
+        // Create or update report entries for S3 objects
         for (const obj of s3Objects) {
-          if (obj.Key && obj.Key.endsWith('.md')) {
+          console.log(`Processing S3 object: ${obj.Key}`);
+          if (obj.Key && obj.Key.startsWith('BRD_') && obj.Key.endsWith('.md')) {
             const existing = storedReports.find(r => r.s3Path === obj.Key);
+            const title = obj.Key.split('/').pop() || obj.Key;
+            const reportData = {
+              title,
+              description: "Report from S3",
+              s3Path: obj.Key,
+              size: obj.Size ? `${Math.round(obj.Size / 1024)} KB` : "Unknown",
+              lastModified: obj.LastModified
+            };
+            
             if (!existing) {
-              const title = obj.Key.split('/').pop() || obj.Key;
-              await storage.createReport({
-                title,
-                description: "Report from S3",
-                s3Path: obj.Key,
-                size: obj.Size ? `${Math.round(obj.Size / 1024)} KB` : "Unknown"
-              });
+              console.log(`Creating new report entry for: ${title}`);
+              await storage.createReport(reportData);
+            } else if (!existing.lastModified || (obj.LastModified && new Date(obj.LastModified) > new Date(existing.lastModified))) {
+              console.log(`Updating lastModified for: ${title}`);
+              await storage.updateReport(existing.id, { lastModified: obj.LastModified });
             }
           }
         }
@@ -268,9 +381,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.warn("Could not sync with S3:", s3Error);
       }
       
-      // Return updated list
+      // Return updated list sorted by latest first
       const reports = await storage.getReports();
-      res.json(reports);
+      const sortedReports = reports.sort((a, b) => {
+        const dateA = a.lastModified ? new Date(a.lastModified).getTime() : 0;
+        const dateB = b.lastModified ? new Date(b.lastModified).getTime() : 0;
+        return dateB - dateA; // Latest first
+      });
+      res.json(sortedReports);
     } catch (error) {
       console.error("Error getting reports:", error);
       res.status(500).json({ error: "Failed to get reports" });

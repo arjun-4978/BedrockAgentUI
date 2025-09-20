@@ -30,6 +30,7 @@ export const reports = pgTable("reports", {
   description: text("description"),
   s3Path: text("s3_path").notNull(),
   size: text("size"),
+  lastModified: timestamp("last_modified"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -53,6 +54,7 @@ export const insertReportSchema = createInsertSchema(reports).pick({
   description: true,
   s3Path: true,
   size: true,
+  lastModified: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

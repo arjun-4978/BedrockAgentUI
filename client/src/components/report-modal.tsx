@@ -100,13 +100,14 @@ export default function ReportModal({ report, onClose }: ReportModalProps) {
               <i className="fas fa-external-link-alt text-muted-foreground"></i>
             </Button>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={handleClose}
-              className="p-2 hover:bg-muted rounded-lg transition-colors"
+              className="px-3 py-1 hover:bg-muted transition-colors"
               data-testid="close-modal-button"
             >
-              <i className="fas fa-times text-muted-foreground"></i>
+              <i className="fas fa-times mr-1"></i>
+              Close
             </Button>
           </div>
         </div>
@@ -126,8 +127,120 @@ export default function ReportModal({ report, onClose }: ReportModalProps) {
               </div>
             </div>
           ) : reportData?.content ? (
-            <div className="markdown-content prose prose-neutral dark:prose-invert max-w-none">
-              <ReactMarkdown>{reportData.content}</ReactMarkdown>
+            <div className="markdown-content max-w-none">
+              <ReactMarkdown 
+                components={{
+                  h1: ({children}) => (
+                    <h1 className="text-3xl font-bold mb-6 mt-8 text-gray-900 dark:text-gray-100 border-b-2 border-gray-300 dark:border-gray-600 pb-3">
+                      {children}
+                    </h1>
+                  ),
+                  h2: ({children}) => (
+                    <h2 className="text-2xl font-semibold mb-4 mt-8 text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700 pb-2">
+                      {children}
+                    </h2>
+                  ),
+                  h3: ({children}) => (
+                    <h3 className="text-xl font-semibold mb-3 mt-6 text-gray-800 dark:text-gray-200">
+                      {children}
+                    </h3>
+                  ),
+                  h4: ({children}) => (
+                    <h4 className="text-lg font-semibold mb-2 mt-4 text-gray-700 dark:text-gray-300">
+                      {children}
+                    </h4>
+                  ),
+                  h5: ({children}) => (
+                    <h5 className="text-base font-semibold mb-2 mt-3 text-gray-700 dark:text-gray-300">
+                      {children}
+                    </h5>
+                  ),
+                  p: ({children}) => (
+                    <p className="mb-4 leading-relaxed text-gray-700 dark:text-gray-300">
+                      {children}
+                    </p>
+                  ),
+                  ul: ({children}) => (
+                    <ul className="mb-4 pl-6 space-y-1">
+                      {children}
+                    </ul>
+                  ),
+                  ol: ({children}) => (
+                    <ol className="mb-4 pl-6 space-y-1">
+                      {children}
+                    </ol>
+                  ),
+                  li: ({children}) => (
+                    <li className="leading-relaxed text-gray-700 dark:text-gray-300 list-disc">
+                      {children}
+                    </li>
+                  ),
+                  strong: ({children}) => (
+                    <strong className="font-semibold text-gray-900 dark:text-gray-100">
+                      {children}
+                    </strong>
+                  ),
+                  em: ({children}) => (
+                    <em className="italic text-gray-600 dark:text-gray-400">
+                      {children}
+                    </em>
+                  ),
+                  code: ({children}) => (
+                    <code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-sm font-mono text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700">
+                      {children}
+                    </code>
+                  ),
+                  pre: ({children}) => (
+                    <pre className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg overflow-x-auto mb-6 border border-gray-200 dark:border-gray-700">
+                      <code className="text-gray-800 dark:text-gray-200 text-sm">
+                        {children}
+                      </code>
+                    </pre>
+                  ),
+                  blockquote: ({children}) => (
+                    <blockquote className="border-l-4 border-gray-400 dark:border-gray-600 pl-4 italic text-gray-600 dark:text-gray-400 mb-4">
+                      {children}
+                    </blockquote>
+                  ),
+                  table: ({children}) => (
+                    <div className="overflow-x-auto mb-6">
+                      <table className="min-w-full border border-gray-300 dark:border-gray-600">
+                        {children}
+                      </table>
+                    </div>
+                  ),
+                  thead: ({children}) => (
+                    <thead className="bg-gray-100 dark:bg-gray-800">
+                      {children}
+                    </thead>
+                  ),
+                  tbody: ({children}) => (
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {children}
+                    </tbody>
+                  ),
+                  tr: ({children}) => (
+                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                      {children}
+                    </tr>
+                  ),
+                  th: ({children}) => (
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-300 dark:border-gray-600">
+                      {children}
+                    </th>
+                  ),
+                  td: ({children}) => (
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
+                      {children}
+                    </td>
+                  ),
+                  hr: () => (
+                    <hr className="my-6 border-gray-300 dark:border-gray-600" />
+                  )
+                }}
+              >
+                {reportData.content}
+              </ReactMarkdown>
             </div>
           ) : (
             <div className="text-center py-8">
