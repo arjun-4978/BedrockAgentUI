@@ -53,7 +53,7 @@ cp .env.example .env
 npm run dev
 ```
 
-5. Open http://localhost:5000 in your browser
+5. Open http://localhost:5001 in your browser
 
 ## Environment Configuration
 
@@ -150,4 +150,4 @@ MIT License - see LICENSE file for details
 
 ## Support
 
-For support and questions, please contact the AI Solutions Squad team.
+For support and questions, please contact the AI Solutions Squad team.# hackathon-ui
